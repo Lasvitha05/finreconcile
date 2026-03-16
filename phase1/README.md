@@ -155,4 +155,4 @@ See the `images/` folder for sample output.
 ---
 
 *Phase 1 complete — March 2026*
-'EOF'
+
