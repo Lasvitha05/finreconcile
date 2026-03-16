@@ -1,0 +1,6 @@
+ref_number,amount,date_recorded,customer
+INV-001,12500.00,2024-01-05,Acme Corp
+INV-002,7900.00,2024-01-09,Beta LLC
+INV-003,3400.00,2024-01-12,Gamma Inc
+INV-005,2200.00,2024-01-18,Epsilon Ltd
+INV-006,4750.00,2024-01-21,Zeta Partners

@@ -51,7 +51,7 @@ This project was deliberately chosen over a generic "FinBot" because:
 ```
 Phase 1  ✅  Core chatbot — terminal-based, API connection, conversation memory
 Phase 2  ✅  Streamlit UI — proper text input, chat window, reset button
-Phase 3  🔲  CSV upload — auto-detect mismatches before sending to Claude
+Phase 3  ✅  CSV upload — auto-detect mismatches before sending to Claude
 Phase 4  🔲  Agent mode — connect to live databases and AWS data sources
 ```
 

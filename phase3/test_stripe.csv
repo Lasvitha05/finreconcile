@@ -1,0 +1,6 @@
+invoice_id,total_amount,payment_date,client_name
+INV-001,12500.00,2024-01-05,Acme Corp
+INV-002,8200.00,2024-01-08,Beta LLC
+INV-003,3400.00,2024-01-12,Gamma Inc
+INV-004,6100.00,2024-01-15,Delta Co
+INV-006,4750.00,2024-01-20,Zeta Partners
