@@ -53,6 +53,7 @@ Phase 1  ✅  Core chatbot — terminal-based, API connection, conversation memo
 Phase 2  ✅  Streamlit UI — proper text input, chat window, reset button
 Phase 3  ✅  CSV upload — auto-detect mismatches before sending to Claude
 Phase 4  ✅  Agent mode — connect to live databases and AWS data sources
+Phase 5  ✅  Data transformation + calculated columns + write-back to S3
 ```
 
 Each phase is a standalone working product. No phase breaks the one before it.
