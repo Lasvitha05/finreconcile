@@ -1,7 +1,7 @@
 # FinReconcile — Project Documentation
 
-> **AI-Powered Financial Reconciliation Assistant**  
-> Built with Python + Anthropic Claude API  
+> **AI-Powered Financial Reconciliation Agent**  
+> Built with Python + Anthropic Claude API + AWS S3 + Streamlit  
 > Author: Lasvitha | Started: March 2026
 
 ---
@@ -13,22 +13,24 @@
 3. [Project Roadmap](#3-project-roadmap)
 4. [Tech Stack](#4-tech-stack)
 5. [Project Structure](#5-project-structure)
-6. [Phase 1 — Setup & Installation](#6-phase-1--setup--installation)
-7. [Phase 1 — Code Walkthrough](#7-phase-1--code-walkthrough)
-8. [Phase 1 — Execution Flow](#8-phase-1--execution-flow)
-9. [Phase 1 — Sample Run](#9-phase-1--sample-run)
-10. [Bugs & Fixes Log](#10-bugs--fixes-log)
-11. [Q&A Log](#11-qa-log)
-12. [How to Run](#12-how-to-run)
+6. [Phase 1 — Terminal Chatbot](#6-phase-1--terminal-chatbot)
+7. [Phase 2 — Streamlit UI](#7-phase-2--streamlit-ui)
+8. [Phase 3 — CSV Upload + Pandas Engine](#8-phase-3--csv-upload--pandas-engine)
+9. [Phase 4 — Autonomous Agent + AWS S3](#9-phase-4--autonomous-agent--aws-s3)
+10. [Phase 5 — Data Transformation + Write-back](#10-phase-5--data-transformation--write-back)
+11. [Bugs & Fixes Log](#11-bugs--fixes-log)
+12. [Key Design Decisions](#12-key-design-decisions)
+13. [How to Run](#13-how-to-run)
+14. [Git Commit Convention](#14-git-commit-convention)
 
 ---
 
 ## 1. Project Vision
 
-FinReconcile is an AI-powered financial reconciliation assistant that helps finance teams at small and mid-size companies automatically detect, explain, and prioritize mismatches between two financial data sources — for example, Stripe vs QuickBooks, or a bank statement vs an internal ledger.
+FinReconcile is an AI-powered financial data engineering agent that autonomously reconciles financial records across two data sources, detects mismatches and anomalies, transforms data with calculated columns, and writes results back to AWS S3 — all through natural language instructions.
 
 **The problem it solves:**  
-Finance teams spend 3–5 days every month manually reconciling data across multiple systems in Excel. Numbers never match, the process is error-prone, and no one enjoys it. FinReconcile replaces that manual process with a conversational AI that finds discrepancies instantly, ranks them by dollar impact, and explains what to investigate.
+Finance teams spend 3–5 days every month manually reconciling data across systems like Stripe and QuickBooks in Excel. Numbers never match, the process is error-prone, and nobody knows the data is wrong until an executive spots it in a board meeting. FinReconcile replaces that manual process entirely.
 
 **Who pays for it:**  
 CFOs and Controllers at Series A–C startups and mid-size companies who feel this pain every single month.
@@ -51,9 +53,9 @@ This project was deliberately chosen over a generic "FinBot" because:
 ```
 Phase 1  ✅  Core chatbot — terminal-based, API connection, conversation memory
 Phase 2  ✅  Streamlit UI — proper text input, chat window, reset button
-Phase 3  ✅  CSV upload — auto-detect mismatches before sending to Claude
-Phase 4  ✅  Agent mode — connect to live databases and AWS data sources
-Phase 5  ✅  Data transformation + calculated columns + write-back to S3
+Phase 3  ✅  CSV upload — AI column mapping, pandas engine, dashboard, on-demand charts
+Phase 4  ✅  Autonomous agent — AWS S3, tool use, SQLite persistence, load sessions
+Phase 5  ✅  Data transformation — calculated columns, clean, enrich, aggregate, write-back to S3
 ```
 
 Each phase is a standalone working product. No phase breaks the one before it.
@@ -66,9 +68,13 @@ Each phase is a standalone working product. No phase breaks the one before it.
 |---|---|---|
 | Python | Core language | 3.11 |
 | anthropic | Official Claude API SDK | 0.84.0 |
-| python-dotenv | Load API key from .env file | 0.21.0 |
+| python-dotenv | Load API keys from .env file | 0.21.0 |
 | streamlit | UI framework (Phase 2+) | latest |
-| pandas | CSV handling (Phase 3+) | latest |
+| pandas | Programmatic reconciliation + transformations | latest |
+| boto3 | AWS SDK — S3 fetch and write-back | latest |
+| plotly | Interactive charts — bar, donut pie | latest |
+| sqlite3 | Local database — built into Python, zero setup | built-in |
+| pyarrow | Parquet file support for S3 sources | latest |
 | Git + GitHub | Version control + portfolio | — |
 
 ---
@@ -78,250 +84,110 @@ Each phase is a standalone working product. No phase breaks the one before it.
 ```
 finreconcile/
 │
-├── .env                  ← API key (never commit this to Git)
-├── .gitignore            ← excludes .env and venv from Git
-├── requirements.txt      ← all installed libraries
-├── README.md             ← this file
+├── .env                             ← API keys (never commit this to Git)
+├── .gitignore                       ← excludes .env, venv, *.db
+├── requirements.txt                 ← all installed libraries
+├── README.md                        ← this file
+├── FinReconcile_Documentation.docx  ← high-level technical documentation
+├── generate_and_upload.py           ← realistic test data generator for S3
 │
 ├── phase1/
-│   └── app.py            ← terminal chatbot, core API logic
+│   ├── app.py                       ← terminal chatbot, core API logic
+│   ├── README.md
+│   └── images/
 │
 ├── phase2/
-│   └── app.py            ← Streamlit UI + conversation memory (coming)
+│   ├── app.py                       ← Streamlit UI + conversation memory
+│   ├── README.md
+│   └── images/
 │
 ├── phase3/
-│   └── app.py            ← CSV upload + auto mismatch detection (coming)
+│   ├── app.py                       ← CSV upload + pandas engine + dashboard
+│   ├── test_stripe.csv              ← sample test data
+│   ├── test_quickbooks.csv          ← sample test data (different column names)
+│   ├── README.md
+│   └── images/
 │
-└── phase4/
-    └── app.py            ← full agent with live data sources (coming)
+├── phase4/
+│   ├── app.py                       ← autonomous agent + AWS S3 + SQLite
+│   ├── README.md
+│   └── images/
+│
+└── phase5/
+    ├── app.py                       ← transform + write-back to S3
+    ├── README.md
+    └── images/
 ```
 
 ---
 
-## 6. Phase 1 — Setup & Installation
+## 6. Phase 1 — Terminal Chatbot
 
-### Prerequisites
-- Python 3.10 or higher
-- A terminal (Mac Terminal, VS Code Terminal, or any CLI)
-- An Anthropic API key from console.anthropic.com
+### What It Does
+Establishes the core pattern: Claude receives a system prompt defining its role as a financial reconciliation analyst, conversation history is manually passed on every API call to simulate memory, and a loop accepts user input from the terminal.
 
-### Step-by-step Installation
+### Setup & Installation
 
 ```bash
-# 1. Create project folder
-mkdir finreconcile
-cd finreconcile
-
-# 2. Create and activate virtual environment
+mkdir finreconcile && cd finreconcile
 python -m venv venv
 source venv/bin/activate          # Mac/Linux
 # venv\Scripts\activate           # Windows
-
-# 3. Install dependencies
 pip install anthropic python-dotenv streamlit pandas
-
-# 4. Save dependencies to requirements.txt
 pip freeze > requirements.txt
-
-# 5. Create folder structure
-mkdir phase1 phase2 phase3 phase4
-
-# 6. Add your API key
+mkdir phase1 phase2 phase3 phase4 phase5
 echo "ANTHROPIC_API_KEY=your_key_here" > .env
-
-# 7. Initialize Git
 git init
-echo "venv/" > .gitignore
-echo ".env" >> .gitignore
-git add .
-git commit -m "project scaffold — phase 1"
+echo "venv/" > .gitignore && echo ".env" >> .gitignore && echo "*.db" >> .gitignore
+git add . && git commit -m "project scaffold"
 ```
 
-> ⚠️ **Critical:** Never commit your `.env` file. Your API key is a secret. The `.gitignore` file above protects you from accidentally pushing it to GitHub.
+> ⚠️ Never commit your `.env` file. Your API key is a secret.
 
----
+### Code Walkthrough
 
-## 7. Phase 1 — Code Walkthrough
-
-**File:** `phase1/app.py`
-
-### Block 1 — Imports
-
-```python
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from anthropic import Anthropic
-from dotenv import load_dotenv
-```
-
-- `sys.path.append` tells Python to look one folder up for files — needed because app.py lives inside the `phase1/` subfolder
+**Block 1 — Imports**
+- `sys.path.append` tells Python to look one folder up — needed because app.py lives inside `phase1/`
 - `Anthropic` is the official SDK that connects to Claude's API
-- `load_dotenv` reads your `.env` file and loads your API key silently into the environment
+- `load_dotenv` reads your `.env` file and loads the API key silently
 
----
+**Block 2 — Client and Memory Setup**
+- `client = Anthropic()` opens the connection to Claude
+- `conversation_history = []` is the chatbot's memory — every message stored as a list of dictionaries
 
-### Block 2 — Client and Memory Setup
+**Block 3 — System Prompt**  
+The most important part of the project. It is the job description handed to Claude before every conversation — defines role, format, and rules. This single prompt is the core product logic.
 
-```python
-load_dotenv()
-client = Anthropic()
-conversation_history = []
-```
-
-- `load_dotenv()` picks up the API key from `.env` — without this, authentication fails
-- `client = Anthropic()` opens the connection to Claude — like dialing a phone line
-- `conversation_history = []` is the chatbot's memory. Every message sent and received is stored here as a list of dictionaries
-
----
-
-### Block 3 — System Prompt
-
-```python
-SYSTEM_PROMPT = """
-You are a financial reconciliation assistant...
-"""
-```
-
-This is the most important part of the entire project. It is the job description handed to Claude before every conversation. It defines:
-
-- What role Claude plays (financial reconciliation analyst)
-- What to do with the data (find mismatches, rank by impact, explain causes)
-- What format to respond in (structured tables and numbered lists)
-- What rules it must never break (never invent numbers, always ask if unclear)
-
-This single prompt is the core product logic. It gets refined more than any other part of the codebase.
-
----
-
-### Block 4 — The `chat()` Function (The Engine)
-
-```python
-def chat(user_message):
-    conversation_history.append({"role": "user", "content": user_message})
-
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=conversation_history
-    )
-
-    reply = response.content[0].text
-
-    conversation_history.append({"role": "assistant", "content": reply})
-
-    return reply
-```
-
-What happens on every single call:
-
-1. The user message is appended to `conversation_history` with `role: user`
-2. The **entire conversation history** is sent to Claude along with the system prompt
-3. Claude reads everything and generates a response
-4. `response.content[0].text` extracts the actual text from the response object
-5. Claude's reply is appended to `conversation_history` with `role: assistant`
-6. The reply is returned to the main loop for printing
+**Block 4 — The `chat()` Function**  
+Every call: appends user message → sends full history to Claude → extracts reply → appends reply to history → returns reply.
 
 > **Key insight:** Claude has no memory by default. Every API call is stateless. The `conversation_history` list is manually passed on every call to simulate memory. This is how every chatbot works under the hood.
 
----
+**Block 5 — The `main()` Loop**  
+Continuous loop: takes terminal input → calls `chat()` → prints response. `reset` clears history, `quit` exits.
 
-### Block 5 — The `main()` Loop
-
-```python
-def main():
-    while True:
-        user_input = input("You: ").strip()
-        if user_input.lower() == "quit":   # exits the program
-        if user_input.lower() == "reset":  # clears conversation memory
-        response = chat(user_input)
-        print(f"FinReconcile: {response}")
-```
-
-A continuous loop that:
-- Takes user input from the terminal
-- Passes it to `chat()`
-- Prints the response
-- Repeats until the user types `quit`
-
-The `reset` command clears `conversation_history` — useful when starting a new reconciliation without old context interfering.
-
----
-
-## 8. Phase 1 — Execution Flow
+### Execution Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        PHASE 1 FLOW                             │
-└─────────────────────────────────────────────────────────────────┘
-
-  User types message in terminal
-           │
-           ▼
-  message appended to conversation_history
-  as {"role": "user", "content": "..."}
-           │
-           ▼
-  client.messages.create() called with:
-  ┌──────────────────────────────────┐
-  │  model: claude-sonnet-4-6        │
-  │  system: SYSTEM_PROMPT           │
-  │  messages: conversation_history  │  ← full history every time
-  └──────────────────────────────────┘
-           │
-           ▼
-  Claude API processes and returns response object
-           │
-           ▼
-  response.content[0].text extracted
-           │
-           ▼
-  reply appended to conversation_history
-  as {"role": "assistant", "content": "..."}
-           │
-           ▼
-  reply printed to terminal
-           │
-           ▼
-  loop repeats ──────────────────────────────────┐
-                                                  │
-  user types "reset" → history cleared           │
-  user types "quit"  → program exits             │
-                                                  │
-  ◄─────────────────────────────────────────────┘
-
-  Memory lifetime:
-  ┌─────────────────────────────────────────────┐
-  │  Program starts  → history = []             │
-  │  Chatting        → history grows in RAM     │
-  │  quit / crash    → history lost forever     │
-  │  reset           → history manually cleared │
-  └─────────────────────────────────────────────┘
-  Note: Persistence (saving to disk/DB) added in Phase 3+
+User types message
+       │
+       ▼
+Appended to conversation_history as {"role": "user"}
+       │
+       ▼
+client.messages.create(system=SYSTEM_PROMPT, messages=conversation_history)
+       │
+       ▼
+Claude returns response → text extracted
+       │
+       ▼
+Reply appended as {"role": "assistant"}
+       │
+       ▼
+Printed to terminal → loop repeats
 ```
 
----
-
-## 9. Phase 1 — Sample Run
-
-**Input given:**
-```
-Stripe records:
-INV-001  $12,500  Acme Corp      Jan 5
-INV-002  $8,200   Beta LLC       Jan 8
-INV-003  $3,400   Gamma Inc      Jan 12
-INV-004  $6,100   Delta Co       Jan 15
-
-QuickBooks records:
-INV-001  $12,500  Acme Corp      Jan 5
-INV-002  $7,900   Beta LLC       Jan 9
-INV-003  $3,400   Gamma Inc      Jan 12
-INV-005  $2,200   Epsilon Ltd    Jan 18
-```
-
-**Output summary:**
+### Sample Run
 
 | Invoice | Stripe | QuickBooks | Status |
 |---|---|---|---|
@@ -334,69 +200,271 @@ INV-005  $2,200   Epsilon Ltd    Jan 18
 **Net difference detected:** $4,100  
 **Ranked by impact:** INV-004 ($6,100) → INV-005 ($2,200) → INV-002 ($300)
 
----
-
-## 10. Bugs & Fixes Log
-
-| # | Issue | Root Cause | Fix |
-|---|---|---|---|
-| 1 | `ModuleNotFoundError: No module named 'anthropic'` when running in VS Code | VS Code was using system Python (`/usr/bin/python3`) instead of the venv | `Cmd+Shift+P` → Python: Select Interpreter → select the venv path |
-| 2 | Multi-line pasted input split into multiple separate messages | Python's `input()` reads one line at a time. Each Enter key sent a new message | Known limitation — fixed in Phase 2 with Streamlit's multi-line text box |
-| 3 | Conversation history lost after quitting | `conversation_history` is a Python list in RAM only — no persistence | Expected Phase 1 behavior — persistence added in Phase 3 |
+### Run
+```bash
+cd phase1 && python app.py
+# Type 'reset' to clear history | 'quit' to exit
+```
 
 ---
 
-## 11. Q&A Log
+## 7. Phase 2 — Streamlit UI
 
-**Q: Why use the Anthropic API directly instead of Claude Code CLI?**  
-A: Claude Code CLI is a coding assistant tool that requires a Pro/Max subscription ($20–100/month). The Anthropic API is pay-per-use (~$5 gets you through all of Phase 1 and 2). More importantly, calling the API directly means you understand exactly what is happening under the hood — you build the product, you own the logic. Claude Code abstracts that away. Use the API to learn; use Claude Code later to accelerate.
+### What It Does
+Replaces the terminal with a browser-based interface. Sidebar for data entry, main panel for chat, follow-up bar that unlocks after first analysis.
 
-**Q: Why does VS Code show library errors even after pip install?**  
-A: VS Code has its own Python interpreter setting that defaults to system Python. When you pip install inside a virtual environment, those packages only exist in that venv. You need to explicitly point VS Code to your venv interpreter via `Cmd+Shift+P → Python: Select Interpreter`.
+**Problems fixed from Phase 1:**
+- Multi-line paste no longer splits into multiple messages (`st.text_area` submits on button click)
+- Product is now showable — runs in the browser at `localhost:8501`
+- Data entry and conversation are visually separated
 
-**Q: Why did pasting multi-line data break the conversation into multiple messages?**  
-A: Python's built-in `input()` reads one line at a time and sends immediately on each Enter key press. The full multi-line paste got split into individual messages. This is resolved in Phase 2 by using Streamlit's `st.text_area()` which accepts multi-line input and only submits on button click.
+### System Prompt Upgrade
+Phase 2 introduced a v2 system prompt with explicit `FIRST ANALYSIS` and `FOLLOW-UP QUESTIONS` sections after observing that the Phase 1 prompt produced vague follow-up answers.
 
-**Q: Is conversation_history stored permanently?**  
-A: No. It is a Python list that lives in RAM only for the duration of the program run. When the user types `quit` or the program crashes, the list is gone. This is intentional for Phase 1 simplicity. In Phase 3 we will add persistence to a local file or database, which is actually a key product differentiator for finance teams who need audit logs.
+> **Key lesson:** The system prompt is the product. A weak prompt produces weak output regardless of UI quality. Iterate on this more than anything else.
+
+### Run
+```bash
+cd phase2 && streamlit run app.py
+```
 
 ---
 
-## 12. How to Run
+## 8. Phase 3 — CSV Upload + Pandas Engine
+
+### What It Does
+The most significant architectural shift. Claude stops doing the math — pandas takes over.
+
+**Workflow:** Upload CSV → AI maps column names to standard schema → pandas computes all mismatches programmatically → Claude receives pre-computed results and explains them.
+
+**Why this matters:** Claude is good at explanation and reasoning, not arithmetic. Offloading computation to pandas makes results faster, cheaper on tokens, and more accurate.
+
+### Key Features
+- AI column mapping — handles different column names across systems (e.g. `invoice_id` vs `ref_number`)
+- Dashboard: 4 metric cards, mismatch bar chart, full reconciliation table
+- On-demand pie charts — triggered by keywords (`pie`, `chart`, `visualize`) — not shown by default
+- Session persistence to JSON on disk
+- Downloadable CSV reconciliation report
+
+### Test Files Included
+Two sample CSVs with intentionally different column names to demonstrate AI mapping:
+- `test_stripe.csv` — columns: `invoice_id`, `total_amount`, `payment_date`, `client_name`
+- `test_quickbooks.csv` — columns: `ref_number`, `amount`, `date_recorded`, `customer`
+
+### Run
+```bash
+pip install plotly
+cd phase3 && streamlit run app.py
+```
+
+---
+
+## 9. Phase 4 — Autonomous Agent + AWS S3
+
+### What It Does
+The product becomes genuinely agentic. Claude is given a tool registry and decides what to call and in what order — no fixed pipeline. Data is fetched directly from AWS S3 with no manual file upload required.
+
+### Agent Tools
+
+| Tool | What Claude Uses It For |
+|---|---|
+| `list_s3_files` | Discover available files before fetching |
+| `fetch_s3_file` | Pull CSV or Parquet directly from S3 |
+| `run_reconciliation` | Merge datasets, find mismatches via pandas |
+| `detect_anomalies` | Classify mismatches HIGH / MEDIUM / LOW |
+| `query_database` | SELECT queries on SQLite history |
+| `generate_report` | Format executive summary for CFO/Controller |
+
+### Agentic Loop
+```
+User: "Reconcile January data"
+       │
+Claude thinks: "I need to list what's in S3 first"
+→ calls list_s3_files
+→ calls fetch_s3_file twice
+→ calls run_reconciliation
+→ calls detect_anomalies
+→ synthesizes final response
+```
+
+### Anomaly Summary Report
+Replaces the wall of individual alert cards with a clean structured report: 4 severity metric cards, top 5 HIGH issues visible, rest collapsed in expanders.
+
+### Conversation Persistence
+Every session saved to SQLite `conversations` table after every message. Load any past session from the sidebar — full conversation + dashboard restored exactly as it was.
+
+### Generate Test Data for S3
+```bash
+pip install boto3 pyarrow
+python generate_and_upload.py --bucket your-bucket --records 500 --months 3
+```
+Generates 500 realistic financial records per month × 3 months with ~8% mismatch rate baked in.
+
+### Environment Variables Required
+```
+ANTHROPIC_API_KEY=sk-ant-...
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-east-1
+```
+
+### Run
+```bash
+cd phase4 && streamlit run app.py
+```
+
+---
+
+## 10. Phase 5 — Data Transformation + Write-back
+
+### What It Does
+Phase 5 completes the data engineering loop. The agent can now modify data, not just analyze it. Twelve transformation operations cover the most common finance data tasks. Results write back to AWS S3 as a new file or overwriting the original.
+
+### Transformation Operations
+
+| Category | Operation | What It Does |
+|---|---|---|
+| Calculated | `add_risk_score` | Adds risk_score (0–3) and risk_label from anomaly data |
+| Calculated | `add_variance_pct` | % variance between two numeric columns |
+| Calculated | `add_flag` | Flag rows where column meets a threshold condition |
+| Calculated | `add_month_column` | Extract month and month_name from a date column |
+| Clean | `fill_nulls` | Fill null values with a default (one column or all) |
+| Clean | `deduplicate` | Remove duplicate rows by column or across all |
+| Clean | `standardize_amounts` | Strip $/, whitespace, round to 2dp |
+| Clean | `standardize_dates` | Parse and reformat dates to standard format |
+| Clean | `trim_strings` | Strip whitespace and uppercase string columns |
+| Enrich | `enrich_from_s3` | Left-join with a reference file from S3 |
+| Aggregate | `monthly_rollup` | Sum/count/avg by month — returns summary table |
+| Aggregate | `category_totals` | Sum/count/avg by category — returns ranked table |
+
+### Safety Principle
+Claude never runs arbitrary Python `exec()`. It generates a structured JSON transformation spec. The app executes only predefined pandas operations. Safe, auditable, reversible.
+
+### Transformation Flow
+```
+User: "Add a risk score and fill nulls, save as new file"
+       │
+       ▼
+Claude calls preview_transform
+generate_transform_spec() → JSON spec
+apply_transformation() → pandas executes safely
+       │
+       ▼
+Before/After preview shown in UI
+Download available without committing to S3
+       │
+       ▼
+User confirms → Claude calls transform_and_save
+write_to_s3() → new file OR overwrite
+Confirmation: rows, cols, S3 path, operations applied
+```
+
+### New Agent Tools in Phase 5
+
+| Tool | When Used |
+|---|---|
+| `preview_transform` | Always before any write — shows before/after |
+| `transform_and_save` | After preview, saves result to S3 |
+| `aggregate_data` | Monthly rollups or category totals with auto bar chart |
+
+### Example Natural Language Instructions
+```
+"Add a risk score column based on reconciliation anomaly severity"
+"Fill all null values with UNKNOWN"
+"Remove duplicate rows based on the invoice_ref column"
+"Standardize the total_amount column and remove dollar signs"
+"Create a monthly rollup using payment_date and total_amount"
+"Save as a new file at transformed/stripe_enriched_march.csv"
+```
+
+### Run
+```bash
+pip install plotly boto3 pyarrow
+cd phase5 && streamlit run app.py
+```
+
+---
+
+## 11. Bugs & Fixes Log
+
+| # | Phase | Issue | Root Cause | Fix |
+|---|---|---|---|---|
+| 1 | 1 | `ModuleNotFoundError: anthropic` in VS Code | VS Code used system Python not venv | `Cmd+Shift+P → Python: Select Interpreter → venv` |
+| 2 | 1 | Multi-line paste split into multiple messages | `input()` reads one line at a time | Fixed in Phase 2 with `st.text_area()` |
+| 3 | 1 | Conversation history lost after quit | Python list in RAM only | Expected — persistence added in Phase 4 |
+| 4 | 2 | Follow-up answers were vague | System prompt had no follow-up instructions | Rewrote prompt with FOLLOW-UP QUESTIONS section |
+| 5 | 3 | Bot responses showed italic gibberish and overflow | Markdown injected into raw HTML `<div>` | Replaced with `st.chat_message()` native component |
+| 6 | 3 | Claude said it could not generate charts | Claude is a text model — it cannot render images | Charts built from pandas dataframe by app, Claude bypassed |
+| 7 | 4 | 0% match rate on all 992 records | AI mapped `payment_id` (system ID) not `invoice_ref` (business ref) | Updated column mapping prompt to prefer business reference |
+| 8 | 4 | 992 alert cards flooded the screen | Every mismatch rendered as individual card | Summary report: top 5 table + collapsed expanders |
+| 9 | 4 | Conversations lost on browser close | `st.session_state` wiped on reload | `conversations` table in SQLite, saved after every message |
+| 10 | 5 | Agent could run unsafe transformations | No execution boundary on AI-generated code | JSON spec pattern — Claude generates ops, app executes predefined functions only |
+
+---
+
+## 12. Key Design Decisions
+
+**Pandas computes, Claude explains**  
+From Phase 3 onward, pandas performs all mathematical comparisons. Claude receives pre-computed results and generates human-readable explanations. This is faster, cheaper on API tokens, and more accurate than asking Claude to compare text directly.
+
+**No `exec()` for transformations**  
+Claude generates a structured JSON spec, not Python code. The app executes only operations from a closed set of 12 predefined pandas functions. Safe and auditable.
+
+**Preview before write**  
+No transformation writes to S3 without a preview step. Users see before/after and can download locally without committing to cloud storage.
+
+**Business ref over system ID for joins**  
+The AI column mapper explicitly prefers business reference columns (e.g. `invoice_ref`) over internal system IDs (e.g. `payment_id`) as join keys — the fix for the critical 0% match rate bug in Phase 4.
+
+**On-demand charts**  
+Charts only render when explicitly requested via keywords (`pie`, `chart`, `visualize`). The dashboard stays clean by default. Claude is bypassed entirely for chart requests — no wasted tokens.
+
+**Conversation persistence by default**  
+Every message is saved to SQLite after each agent response. No manual save required. Any session is recoverable from the sidebar Load button.
+
+---
+
+## 13. How to Run
 
 ```bash
-# Navigate to your project
+# Clone and set up
+git clone https://github.com/Lasvitha05/finreconcile
 cd finreconcile
+python -m venv venv
+source venv/bin/activate
+pip install anthropic streamlit pandas plotly boto3 python-dotenv pyarrow
 
-# Activate virtual environment
-source venv/bin/activate        # Mac/Linux
-# venv\Scripts\activate         # Windows
+# Add your keys
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
+echo "AWS_ACCESS_KEY_ID=AKIA..." >> .env
+echo "AWS_SECRET_ACCESS_KEY=..." >> .env
+echo "AWS_REGION=us-east-1" >> .env
 
-# Run Phase 1
-cd phase1
-python app.py
+# Run any phase
+python phase1/app.py                  # terminal only
+streamlit run phase2/app.py           # browser UI
+streamlit run phase3/app.py           # CSV upload + dashboard
+streamlit run phase4/app.py           # autonomous agent + S3
+streamlit run phase5/app.py           # transform + write-back
 
-# Commands inside the app
-# Type your financial data and press Enter to send
-# Type 'reset' to clear conversation history
-# Type 'quit' to exit
+# Generate S3 test data (Phase 4/5)
+python generate_and_upload.py --bucket your-bucket --records 500 --months 3
 ```
 
 ---
 
-## Git Commit Convention (Use This Going Forward)
+## 14. Git Commit Convention
 
 ```bash
-git add .
-git commit -m "phase1: working terminal chatbot with reconciliation prompt"
-git commit -m "phase2: add streamlit UI and multiline input"
-git commit -m "fix: VS Code interpreter issue documented"
-git commit -m "docs: update README with phase 1 QA log"
+git commit -m "feat: add phase5 transformation and write-back"
+git commit -m "fix: column mapping prefers business ref over system ID"
+git commit -m "docs: update README with all 5 phases"
+git commit -m "chore: add railway deployment config"
 ```
 
-Format: `type(scope): short description`  
-Types: `feat`, `fix`, `docs`, `refactor`, `test`
+Format: `type: short description`  
+Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 ---
 
-*Last updated: Phase 1 complete — March 2026*
+*Last updated: All 5 phases complete — March 2026*
